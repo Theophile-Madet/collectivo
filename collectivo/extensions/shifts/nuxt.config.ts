@@ -1,13 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
-  ssr: false,
-  extends: [
-    "@collectivo/collectivo",
-    "@collectivo/memberships",
-    "@collectivo/shifts",
-    "collectivo_mila",
-  ],
+  extends: ["@collectivo/collectivo"],
   i18n: {
     langDir: "./lang",
     locales: [
