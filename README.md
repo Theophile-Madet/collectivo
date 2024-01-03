@@ -50,6 +50,11 @@ Log in with the following example users:
 - Editor: editor@example.com / editor (Collectivo, Directus)
 - User: user@example.com / user (Collectivo)
 
+## Configuration
+
+- Internationalization (see [nuxt/i18n](https://i18n.nuxtjs.org/))
+  - Change the default language: add `i18n: {defaultLocale: 'en'}` to `nuxt.config.ts`.
+
 ## Migrations
 
 Migrations between schemas can be run via the Nuxt API endpoint `/api/migrate/`. Extensions can define a schema for each version. E.g. a schema can be for version `0.0.1` of the core extension `collectivo`. A migration script can be run both before and after applying each schema version.
@@ -107,9 +112,13 @@ The repository is structured as follows:
   - To add collectivo, add `extends: ["@collectivo/collectivo"]` (see [Nuxt Layer](https://nuxt.com/docs/guide/going-further/layers)).
 - Register your extension on the backend (see [registerExtension](#registerextension))
   - Here, you can set the name of your extension that should be used in the database. The name should not include underscores, e.g. `myExtension`.
+- Add your package to the development app
+  - Add your package name to `dependencies` in `collectivo/app/package.json`, with the version being `"workspace:*"`
+  - Add the package name to `extends` in `collectivo/app/nuxt.config.ts`.
+  - Run `pnpm i` to connect the packages.
 - Create a database schema for your extension (see [initschema](#initschema)).
 - Create frontend components for your extension (see [Frontend API](#frontend-api))
-- Follow [installation](#installation) to set up a development server that will now include your extension.
+- Follow [installation](#installation) to start the development app.
 
 ## Best practices
 
@@ -169,9 +178,9 @@ Additional libraries can be loaded in `nuxt.config.ts`.
 
 The following [composables](https://nuxt.com/docs/guide/directory-structure/composables) are available for frontend development.
 
-### `setPageTitle`
+### `setCollectivoTitle`
 
-`setPageTitle(title: string)`
+`setCollectivoTitle(title: string)`
 
 Use in a page to set a page title for both the visible header and the metadata.
 
@@ -181,9 +190,9 @@ Use in a page to set a page title for both the visible header and the metadata.
 
 Access the [directus client](https://docs.directus.io/guides/sdk/getting-started.html) to interact with the database.
 
-### `useUser`
+### `useCollectivoUser`
 
-`useUser(): UserStore`
+`useCollectivoUser(): UserStore`
 
 Store for data of the currently authenticated user, with the following attributes:
 
@@ -196,20 +205,38 @@ Store for data of the currently authenticated user, with the following attribute
 - `load: (force: boolean = false) => Promise<UserStore>` -> Fetch user data
 - `save: (data: CollectivoUser) => Promise<UserStore>` -> Update user data
 
-### `useSidebarMenu`
+### `useCollectivoMenus`
 
-`useSidebarMenu(): Ref<CollectivoMenuItem[]>`
+`useCollectivoMenus(): Ref<CollectivoMenus>`
 
-This composable can be used to add or adapt menu items. Best to use in a plugin as follows:
+This composable can be used to add or adapt menu items.
+
+There are two menus in `CollectivoMenus`:
+
+- `main`: Shown for authenticated users.
+- `public`: Shown for unauthenticated users.
+
+Attributes:
+
+- `label: string` - Will be shown next to the icon.
+- `icon: string` - Icon to be used (see [icons](#icons))
+- `to: string` - A path like `/my/path` or `https://externallink.com`
+- `external: boolan` - If true, path will be interepreted as an external URL.
+- `hideOnMobile: boolean` - If true, item will not be shown on small screens.
+- `target: string` - Target attribute of the link.
+- `click: Function` - Click attribute of the link.
+- `filter: (item: CollectivoMenuItem) => boolean` - Show item only if this function returns `true`.
+
+Here is an example of how to add a menu item to the main menu through a plugin:
 
 ```ts
 // my-extension/plugins/setup.ts
 export default defineNuxtPlugin(() => {
-  const menu = useSidebarMenu();
-  menu.value.push({
+  const menu = useCollectivoMenus();
+  menu.value.main.push({
     label: "My menu item",
-    to: "/my/path",
     icon: "i-system-uicons-cubes",
+    to: "/my/path",
     order: 100
   });
 }
@@ -245,11 +272,11 @@ export default defineNitroPlugin(() => {
 
 ### `initSchema`
 
-`initSchema(extension: string, version: string, options: ExtensionSchemaOptions)`
+`initSchema(extension: string, version: string, options: ExtensionSchemaOptions): ExtensionSchema`
 
-Creates a new schema class that can be used to define the database structure and migrations of your extension (see [migrations](#migrations)).
+Initiates a new [ExtensionSchema](#extensionschema) that can be used to define the database structure and migrations of your extension (see [migrations](#migrations)).
 
-Should be declared as follows and used by [`registerExtension`](#registerextension):
+Can be applied as follows and added to [`registerExtension`](#registerextension):
 
 ```ts
 // my-extension/server/schemas/mySchema.ts
@@ -258,7 +285,9 @@ const schema = initSchema("myExtension", "0.0.1");
 export default schema;
 ```
 
-The resulting schema has the following attributes:
+### `ExtensionSchema`
+
+This class has the following attributes:
 
 - `extension: string`
 - `version: string`
@@ -267,12 +296,18 @@ The resulting schema has the following attributes:
 - `run_after: () => Promise<void>` -> Custom migration script to be run after applying this schema version
 - `collections: NestedPartial<DirectusCollection<any>>[]`
 - `fields: NestedPartial<DirectusField<any>>[]`
-- `relations: NestedPartial<DirectusRelation<any>>[]`
+- `relations: NestedPartial<DirectusRelation<any>>[]` -> Can be created with the methods below.
 - `roles: NestedPartial<DirectusRole<any>>[]`
 - `permissions: NestedPartial<DirectusPermission<any>>[]`
 - `flows: NestedPartial<DirectusFlow<any>>[]`
 - `operations: NestedPartial<DirectusOperation<any>>[]`
 - `translations: any[]`
+
+And the following methods:
+
+- `createO2MRelation()` - Utility method to create a [One-to-Many](https://docs.directus.io/app/data-model/relationships.html#one-to-many-o2m) relationship
+- `createM2MRelation()` - Utility method to create a [Many-to_many](https://docs.directus.io/app/data-model/relationships.html#many-to-many-m2m) relationship
+- `createM2ARelation()` - Utility method to create a [Many-to-Any](https://docs.directus.io/app/data-model/relationships.html#many-to-any-m2a) relationship
 
 ### `useDirectusAdmin`
 
