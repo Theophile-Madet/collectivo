@@ -6,7 +6,6 @@ export default defineNuxtConfig({
     "@collectivo/collectivo",
     "@collectivo/memberships",
     "@collectivo/shifts",
-    "collectivo_mila",
   ],
   i18n: {
     lazy: true,
