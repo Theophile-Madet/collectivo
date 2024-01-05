@@ -104,8 +104,9 @@ export class ExtensionSchema {
     CollectionOne: string,
     CollectionMany: string,
     ForeignKey: string,
+    CollectionManyFieldType?: string,
   ) => {
-    createO2MRelation(this, CollectionOne, CollectionMany, ForeignKey);
+    createO2MRelation(this, CollectionOne, CollectionMany, ForeignKey, CollectionManyFieldType);
   };
 
   apply = async () => {
@@ -281,11 +282,12 @@ export async function createO2MRelation(
   CollectionOne: string,
   CollectionMany: string,
   ForeignKey: string,
+  collectionManyFieldType?: string,
 ) {
   schema.fields.push({
     collection: CollectionOne,
     field: ForeignKey,
-    type: "integer",
+    type: collectionManyFieldType ?? "integer",
     schema: {},
     meta: { interface: "select-dropdown-m2o", special: ["m2o"] },
   });
