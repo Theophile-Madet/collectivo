@@ -1,11 +1,9 @@
 import {
+  DirectusCollection,
+  DirectusField,
   DirectusFlow,
   DirectusOperation,
   DirectusPermission,
-} from "@directus/sdk";
-import {
-  DirectusCollection,
-  DirectusField,
   DirectusRelation,
   DirectusRole,
   NestedPartial,
@@ -104,9 +102,15 @@ export class ExtensionSchema {
     CollectionOne: string,
     CollectionMany: string,
     ForeignKey: string,
-    CollectionManyFieldType?: string,
+    Settings?: directusO2MSettings,
   ) => {
-    createO2MRelation(this, CollectionOne, CollectionMany, ForeignKey, CollectionManyFieldType);
+    createO2MRelation(
+      this,
+      CollectionOne,
+      CollectionMany,
+      ForeignKey,
+      Settings,
+    );
   };
 
   apply = async () => {
@@ -277,26 +281,40 @@ function createM2MRelation(
   });
 }
 
+interface directusO2MSettings {
+  collectionManyFieldType?: string;
+  template?: string;
+}
+
 export async function createO2MRelation(
   schema: ExtensionSchema,
   CollectionOne: string,
   CollectionMany: string,
   ForeignKey: string,
-  collectionManyFieldType?: string,
+  settings?: directusO2MSettings,
 ) {
   schema.fields.push({
     collection: CollectionOne,
     field: ForeignKey,
-    type: collectionManyFieldType ?? "integer",
+    type: settings?.collectionManyFieldType ?? "integer",
     schema: {},
-    meta: { interface: "select-dropdown-m2o", special: ["m2o"] },
+    meta: {
+      interface: "select-dropdown-m2o",
+      special: ["m2o"],
+      display: "related-values",
+      display_options: { template: settings?.template },
+    },
   });
 
   schema.relations.push({
     collection: CollectionOne,
     field: ForeignKey,
     related_collection: CollectionMany,
-    meta: { sort_field: null },
+    meta: {
+      sort_field: null,
+      display: "related-values",
+      display_options: { template: settings?.template },
+    },
     schema: { on_delete: "SET NULL" },
   });
 }

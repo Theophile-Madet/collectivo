@@ -239,7 +239,7 @@ export default defineNuxtPlugin(() => {
     to: "/my/path",
     order: 100
   });
-}
+})
 ```
 
 ## Backend
